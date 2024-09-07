@@ -1,109 +1,86 @@
-'use strict';
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const { parse } = require('date-fns');
+const cheerio = require('cheerio');
 
-const ALPHA_VANTAGE_API_KEY = 'D3RFBVMVCQSI2LUP';
-const MAX_DAILY_REQUESTS = 25;
-let dailyRequests = 0;
-let lastResetDate = new Date().toDateString();
-
-function checkRateLimit() {
-  const currentDate = new Date().toDateString();
-  if (currentDate !== lastResetDate) {
-    dailyRequests = 0;
-    lastResetDate = currentDate;
-  }
+async function scrapeCompanyData(companyCode) {
+  const url = `https://www.screener.in/company/${companyCode}/consolidated/`;
   
-  if (dailyRequests >= MAX_DAILY_REQUESTS) {
-    throw new Error('Daily API limit reached');
+  try {
+    const response = await axios.get(url);
+    const $ = cheerio.load(response.data);
+    
+    const companyData = {};
+    
+    // Extract company name
+    companyData.name = $('h1').text().trim();
+    if (!companyData.name) {
+      console.log('Failed to extract company name');
+    }
+    
+    // Extract ratios
+    const ratios = $('.company-ratios #top-ratios li');
+    if (ratios.length === 0) {
+      console.log('No ratios found');
+    }
+    
+    ratios.each((index, element) => {
+      const name = $(element).find('.name').text().trim();
+      let value = $(element).find('.value').text().trim();
+      
+      if (!name || !value) {
+        console.log(`Failed to extract ratio at index ${index}`);
+        return; // Skip this iteration
+      }
+      
+      value = value.replace('₹', '').replace(',', '').trim();
+      
+      if (name === "High / Low") {
+        const [high, low] = value.split('/');
+        companyData["52 Week High"] = parseFloat(high.trim());
+        companyData["52 Week Low"] = parseFloat(low.trim());
+      } else if (value.includes('%')) {
+        companyData[name] = parseFloat(value.replace('%', ''));
+      } else if (value.includes('Cr.')) {
+        companyData[name] = parseFloat(value.replace('Cr.', '')) * 10000000;
+      } else {
+        companyData[name] = isNaN(parseFloat(value)) ? value : parseFloat(value);
+      }
+    });
+    
+    // Extract about section
+    companyData.about = $('.about-section').text().trim();
+    if (!companyData.about) {
+      console.log('Failed to extract about section');
+    }
+    
+    if (Object.keys(companyData).length === 0) {
+      throw new Error('No data could be extracted from the page');
+    }
+    
+    return companyData;
+  } catch (error) {
+    console.error('Error scraping company data:', error);
+    throw error; // Re-throw the error to be caught in the route handler
   }
-  
-  dailyRequests++;
 }
 
 router.get('/search', async (req, res) => {
   try {
-    checkRateLimit();
-
     const { ticker } = req.query;
     if (!ticker) {
       return res.status(400).json({ error: 'Ticker symbol is required' });
     }
 
-    const endpoints = {
-      overview: `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`,
-      globalQuote: `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`,
-      dailyTimeSeries: `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`,
-      marketStatus: `https://www.alphavantage.co/query?function=MARKET_STATUS&apikey=${ALPHA_VANTAGE_API_KEY}`,
-      newsSentiment: `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`
-    };
+    const companyData = await scrapeCompanyData(ticker);
 
-    const responses = await Promise.all(Object.values(endpoints).map(endpoint => axios.get(endpoint)));
-
-    const [overviewData, quoteData, dailyData, marketStatusData, newsData] = responses.map(response => response.data);
-
-    if (overviewData['Error Message'] || quoteData['Information'] || !quoteData['Global Quote']) {
-      if (quoteData['Information'] && quoteData['Information'].includes('API rate limit')) {
-        return res.status(429).json({ error: 'API rate limit reached. Please try again later.', details: quoteData['Information'] });
-      }
-      
-      return res.status(404).json({ error: 'Ticker symbol not found or API limit reached', details: { overviewError: overviewData['Error Message'], quoteData: quoteData } });
+    if (!companyData || Object.keys(companyData).length === 0) {
+      return res.status(404).json({ error: 'Failed to retrieve company data' });
     }
-
-    // Fundamental Analysis
-    const fundamentalData = {
-      marketCap: overviewData.MarketCapitalization,
-      peRatio: overviewData.PERatio,
-      dividendYield: overviewData.DividendYield,
-      roe: overviewData.ReturnOnEquityTTM,
-    };
-
-    // Technical Analysis
-    const dailyTimeSeries = dailyData['Time Series (Daily)'];
-    const candlestickData = Object.entries(dailyTimeSeries).map(([date, { '1. open': open, '2. high': high, '3. low': low, '4. close': close, '5. volume': volume }]) => ({
-      date,
-      open: parseFloat(open),
-      high: parseFloat(high),
-      low: parseFloat(low),
-      close: parseFloat(close),
-      volume: parseFloat(volume)
-    }));
-
-    const technicalIndicators = calculateTechnicalIndicators(candlestickData);
-
-    // Sentiment Analysis
-    const sentimentAnalysis = analyzeSentiment(newsData);
-
-    const companyData = {
-      name: overviewData.Name,
-      ticker: overviewData.Symbol,
-      price: quoteData['Global Quote']['05. price'],
-      priceChange: quoteData['Global Quote']['09. change'],
-      date: new Date().toLocaleDateString(),
-      website: overviewData.Website || 'N/A',
-      about: overviewData.Description,
-      keyPoints: fundamentalData,
-      technicalIndicators,
-      marketStatus: marketStatusData,
-      sentiment: sentimentAnalysis,
-      news: newsData
-    };
 
     res.json(companyData);
   } catch (error) {
-    if (error.message === 'Daily API limit reached') {
-      return res.status(429).json({ error: 'API rate limit reached. Please try again tomorrow.' });
-    }
-    
-    if (error.response) {
-      return res.status(error.response.status).json({
-        error: 'Failed to fetch company data',
-        details: error.message,
-        responseData: error.response.data
-      });
-    }
+    console.error('Error in /search route:', error);
     res.status(500).json({
       error: 'Failed to fetch company data',
       details: error.message
@@ -111,41 +88,25 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// Function to calculate technical indicators
-function calculateTechnicalIndicators(candlestickData) {
-  const indicators = {};
+// Add a new route to fetch stock data
+router.get('/stocks', async (req, res) => {
+  try {
+    // Here you would typically fetch the stock data from your database or another API
+    // For this example, we'll return a mock data array
+    const mockStockData = [
+      { 'S.No': '1', 'Name': 'HDFC Bank', 'CMP': '1500', 'P/E': '20', 'Mar Cap': '800000', 'Div Yld': '1.2' },
+      { 'S.No': '2', 'Name': 'Reliance Industries', 'CMP': '2000', 'P/E': '25', 'Mar Cap': '1200000', 'Div Yld': '0.8' },
+      // Add more mock data as needed
+    ];
 
-  // Example of Moving Average Calculation
-  const movingAverage = (data, period) => {
-    return data.map((_, idx, arr) => {
-      if (idx < period - 1) return null;
-      const subset = arr.slice(idx - period + 1, idx + 1);
-      const avg = subset.reduce((sum, d) => sum + d.close, 0) / period;
-      return { date: data[idx].date, movingAverage: avg };
-    }).filter(d => d);
-  };
-
-  indicators['50-dayMA'] = movingAverage(candlestickData, 50);
-  indicators['200-dayMA'] = movingAverage(candlestickData, 200);
-
-  // Add other indicators like RSI, MACD as needed
-  // Example: RSI calculation (you need to implement RSI logic)
-  
-  return indicators;
-}
-
-// Function to analyze sentiment
-function analyzeSentiment(newsData) {
-  // Example sentiment analysis (needs real sentiment analysis implementation)
-  const sentimentScores = newsData['News Sentiment'] || [];
-  const positive = sentimentScores.filter(score => score.sentiment === 'positive').length;
-  const negative = sentimentScores.filter(score => score.sentiment === 'negative').length;
-
-  return {
-    positiveNews: positive,
-    negativeNews: negative,
-    sentimentRatio: positive / (positive + negative)
-  };
-}
+    res.json(mockStockData);
+  } catch (error) {
+    console.error('Error fetching stock data:', error);
+    res.status(500).json({
+      error: 'Failed to fetch stock data',
+      details: error.message
+    });
+  }
+});
 
 module.exports = router;

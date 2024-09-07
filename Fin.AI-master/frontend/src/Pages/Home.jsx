@@ -8,8 +8,17 @@ const SubscriptionCard = ({ title, price, features, icon: Icon }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), 300);
-    return () => clearTimeout(timer);
+    const fetchStockData = async () => {
+      try {
+        const response = await fetch('/api/stocks');
+        const data = await response.json();
+        setStocks(data);
+      } catch (error) {
+        console.error('Error fetching stock data:', error);
+      }
+    };
+  
+    fetchStockData();
   }, []);
   
   return (
@@ -31,9 +40,60 @@ const SubscriptionCard = ({ title, price, features, icon: Icon }) => {
   );
 };
 
+const StockTable = ({ stocks, onCompanyClick }) => {
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full bg-white">
+        <thead>
+          <tr>
+            <th className="px-4 py-2">S.No</th>
+            <th className="px-4 py-2">Name</th>
+            <th className="px-4 py-2">CMP</th>
+            <th className="px-4 py-2">P/E</th>
+            <th className="px-4 py-2">Mar Cap</th>
+            <th className="px-4 py-2">Div Yld</th>
+            <th className="px-4 py-2">NP Qtr</th>
+            <th className="px-4 py-2">Qtr Profit Var</th>
+            <th className="px-4 py-2">Sales Qtr</th>
+            <th className="px-4 py-2">Qtr Sales Var</th>
+            <th className="px-4 py-2">ROCE</th>
+            <th className="px-4 py-2">PAT Qtr</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stocks.map((stock, index) => (
+            <tr key={index}>
+              <td className="border px-4 py-2">{stock['S.No']}</td>
+              <td className="border px-4 py-2">
+                <button
+                  onClick={() => onCompanyClick(stock.Name)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  {stock.Name}
+                </button>
+              </td>
+              <td className="border px-4 py-2">{stock.CMP}</td>
+              <td className="border px-4 py-2">{stock['P/E']}</td>
+              <td className="border px-4 py-2">{stock['Mar Cap']}</td>
+              <td className="border px-4 py-2">{stock['Div Yld']}</td>
+              <td className="border px-4 py-2">{stock['NP Qtr']}</td>
+              <td className="border px-4 py-2">{stock['Qtr Profit Var']}</td>
+              <td className="border px-4 py-2">{stock['Sales Qtr']}</td>
+              <td className="border px-4 py-2">{stock['Qtr Sales Var']}</td>
+              <td className="border px-4 py-2">{stock.ROCE}</td>
+              <td className="border px-4 py-2">{stock['PAT Qtr']}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 const FinAiHomepage = () => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState('light');
+  const [stocks, setStocks] = useState([]);
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -51,9 +111,28 @@ const FinAiHomepage = () => {
     navigate('/fininspect');
   };
 
+  const handleCompanyClick = (companyName) => {
+    navigate(`/fundamentals/${encodeURIComponent(companyName)}`);
+  };
+
   useEffect(() => {
     document.documentElement.className = theme;
   }, [theme]);
+
+  useEffect(() => {
+    // Fetch stock data from your backend API
+    const fetchStockData = async () => {
+      try {
+        const response = await fetch('/api/stocks');
+        const data = await response.json();
+        setStocks(data);
+      } catch (error) {
+        console.error('Error fetching stock data:', error);
+      }
+    };
+
+    fetchStockData();
+  }, []);
 
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-purple-900 text-white' : 'bg-purple-50 text-purple-900'} transition-colors duration-300`}>
@@ -91,6 +170,14 @@ const FinAiHomepage = () => {
         >
           Start Your Journey
         </button>
+      </section>
+
+      {/* Stock Data Section */}
+      <section className="container mx-auto py-20 px-4">
+        <h2 className="text-4xl font-bold text-center mb-12 font-poppins animate-fade-in-down">
+          Latest Stock Data
+        </h2>
+        <StockTable stocks={stocks} onCompanyClick={handleCompanyClick} />
       </section>
 
       {/* Subscription Models */}
