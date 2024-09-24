@@ -17,38 +17,35 @@ connectDB();
 // Routes
 const authRoutes = require('./routes/auth');
 const fundamentalsRoutes = require('./routes/Fundamentals');
-const finspectRoutes = require('./routes/Finspect');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/fundamentals', fundamentalsRoutes);
-app.use('/api/finspect', finspectRoutes);
 
 // Stock data route
 app.get('/api/stocks', async (req, res) => {
-  try {
-    const stockData = await getStockData();
-    res.setHeader('Content-Type', 'application/json');
-    res.json(stockData);
-  } catch (error) {
-    console.error('Error in /api/stocks route:', error);
-    res.status(500).json({ error: 'An error occurred while fetching stock data' });
-  }
+    try {
+        const stocks = await getStockData();
+        res.json(stocks);
+    } catch (error) {
+        console.error('Error fetching stock data:', error);
+        res.status(500).json({ error: error.message, stocks: [] });
+    }
 });
 
 // Basic route for testing
 app.get('/', (req, res) => {
-  res.json({ message: "Welcome to the Fin.AI API" });
+    res.json({ message: "Welcome to the Fin.AI API" });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something broke!' });
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
 
 module.exports = app;

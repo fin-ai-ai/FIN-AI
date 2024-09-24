@@ -1,35 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Award, Diamond, Phone, Mail, Sun, Moon, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { CreditCard, Award, Diamond, Phone, Mail, Sun, Moon, TrendingUp, RefreshCw } from 'lucide-react';
 import '../App.css';
 import '../index.css';
 
 const SubscriptionCard = ({ title, price, features, icon: Icon }) => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const fetchStockData = async () => {
-      try {
-        const response = await fetch('/api/stocks');
-        const data = await response.json();
-        setStocks(data);
-      } catch (error) {
-        console.error('Error fetching stock data:', error);
-      }
-    };
-  
-    fetchStockData();
-  }, []);
-  
   return (
-    <div className={`subscription-card bg-gradient-to-br from-purple-700 to-pink-500 text-white p-6 rounded-lg shadow-lg hover:scale-105 transition-all duration-300 ${isVisible ? 'visible' : ''}`}>
-      <Icon className="w-12 h-12 mb-4 text-purple-200" />
+    <div className="subscription-card bg-white bg-gradient-to-br from-purple-600 to-pink-500 text-purple-400 dark:text-white p-6 rounded-lg shadow-lg hover:scale-105 transition-all duration-300 w-full md:w-80 flex-shrink-0 border-2 border-purple-500">
+      <Icon className="w-12 h-12 mb-4 text-purple-500" />
       <h3 className="text-2xl font-bold mb-2 font-poppins">{title}</h3>
       <p className="text-3xl font-bold mb-4 font-montserrat">${price}<span className="text-sm">/month</span></p>
       <ul className="space-y-2">
         {features.map((feature, index) => (
           <li key={index} className="flex items-center font-lato">
-            <TrendingUp className="mr-2 text-pink-300" /> {feature}
+            <TrendingUp className="mr-2 text-purple-500" /> {feature}
           </li>
         ))}
       </ul>
@@ -39,7 +24,6 @@ const SubscriptionCard = ({ title, price, features, icon: Icon }) => {
     </div>
   );
 };
-
 const StockTable = ({ stocks, onCompanyClick }) => {
   return (
     <div className="overflow-x-auto">
@@ -67,7 +51,7 @@ const StockTable = ({ stocks, onCompanyClick }) => {
               <td className="border px-4 py-2">
                 <button
                   onClick={() => onCompanyClick(stock.Name)}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
                 >
                   {stock.Name}
                 </button>
@@ -94,6 +78,8 @@ const FinAiHomepage = () => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState('light');
   const [stocks, setStocks] = useState([]);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -115,22 +101,26 @@ const FinAiHomepage = () => {
     navigate(`/fundamentals/${encodeURIComponent(companyName)}`);
   };
 
+  const fetchStockData = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.get('http://localhost:5000/api/stocks');
+      setStocks(response.data.stocks);
+    } catch (error) {
+      console.error('Error fetching stock data:', error);
+      setError(`Failed to load stock data: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     document.documentElement.className = theme;
   }, [theme]);
 
   useEffect(() => {
-    // Fetch stock data from your backend API
-    const fetchStockData = async () => {
-      try {
-        const response = await fetch('/api/stocks');
-        const data = await response.json();
-        setStocks(data);
-      } catch (error) {
-        console.error('Error fetching stock data:', error);
-      }
-    };
-
     fetchStockData();
   }, []);
 
@@ -146,7 +136,7 @@ const FinAiHomepage = () => {
             <li><a href="#" className="nav-link hover:text-pink-400 transition-colors duration-300">Home</a></li>
             <li><a href="#" className="nav-link hover:text-pink-400 transition-colors duration-300">About</a></li>
             <li><a href="#" onClick={handleFundamentals} className="nav-link hover:text-pink-400 transition-colors duration-300">Fundamentals</a></li>
-            <li><a href="#" onClick={handleFinInspect} className="nav-link hover:text-pink-400 transition-colors duration-300">FinInspect</a></li>
+            <li><a href="#" onClick={handleFinInspect} className="nav-link hover:text-pink-400 transition-colors duration-300">FinSpect</a></li>
             <li>
               <button onClick={toggleTheme} className="p-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white transition-colors duration-300">
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -174,18 +164,34 @@ const FinAiHomepage = () => {
 
       {/* Stock Data Section */}
       <section className="container mx-auto py-20 px-4">
-        <h2 className="text-4xl font-bold text-center mb-12 font-poppins animate-fade-in-down">
+        <h2 className="text-4xl font-bold text-center mb-12 font-poppins animate-fade-in-down text-purple-600">
           Latest Stock Data
         </h2>
-        <StockTable stocks={stocks} onCompanyClick={handleCompanyClick} />
+        {isLoading ? (
+          <div className="text-center">Loading stock data...</div>
+        ) : error ? (
+          <div className="text-center">
+            <p className="text-red-500 mb-4">{error}</p>
+            <button 
+              onClick={fetchStockData}
+              className="bg-purple-600 text-white px-4 py-2 rounded-full flex items-center mx-auto"
+            >
+              <RefreshCw className="mr-2" /> Retry
+            </button>
+          </div>
+        ) : stocks.length > 0 ? (
+          <StockTable stocks={stocks} onCompanyClick={handleCompanyClick} />
+        ) : (
+          <div className="text-center">No stock data available.</div>
+        )}
       </section>
 
       {/* Subscription Models */}
       <section className="container mx-auto py-20 px-4">
-        <h2 className="text-4xl font-bold text-center mb-12 font-poppins animate-fade-in-down">
+        <h2 className="text-4xl font-bold text-center mb-12 font-poppins animate-fade-in-down text-purple-600">
           Choose Your Path to Financial Excellence
         </h2>
-        <div className="flex flex-col md:flex-row justify-center items-stretch space-y-8 md:space-y-0 md:space-x-8">
+        <div className="flex flex-col md:flex-row justify-center items-stretch space-y-8 md:space-y-0 md:space-x-8 overflow-x-auto">
           <SubscriptionCard 
             title="Silver Insights"
             price={29}
@@ -206,7 +212,6 @@ const FinAiHomepage = () => {
           />
         </div>
       </section>
-
       {/* Footer */}
       <footer className="bg-gradient-to-br from-purple-700 to-pink-500 py-12 transition-colors duration-300">
         <div className="container mx-auto flex flex-col md:flex-row justify-between items-center px-4">

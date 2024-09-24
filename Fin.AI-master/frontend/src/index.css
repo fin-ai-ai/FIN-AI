@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+.subscription-card {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    min-height: 400px;
+  }
+  
+  .subscription-card * {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+  }

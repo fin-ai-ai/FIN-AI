@@ -36,7 +36,7 @@ const Login = () => {
       setShowPopup(true);
       setTimeout(() => {
         setShowPopup(false);
-        navigate('/fundamentals');
+        navigate('/');
       }, 2000);
     } catch (err) {
       if (err.response && err.response.status === 400) {
