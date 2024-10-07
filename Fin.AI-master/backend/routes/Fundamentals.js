@@ -169,32 +169,6 @@ async function scrapeCompanyData(companyCode) {
       }
     });
 
-    // Extract quarterly results
-    const quarterlyResults = [];
-    const quarters = $('#quarters table.data-table tbody tr');
-
-    quarters.each((index, row) => {
-      const quarterData = {};
-      $(row).find('td').each((cellIndex, cell) => {
-        const header = $('#quarters table.data-table thead th').eq(cellIndex).text().trim();
-        const value = $(cell).text().trim();
-
-        if (header && value) {
-          if (cellIndex === 0) {
-            quarterData['Metric'] = value;
-          } else {
-            const numValue = parseFloat(value.replace(/,/g, ''));
-            quarterData[header] = isNaN(numValue) ? value : numValue;
-          }
-        }
-      });
-      if (Object.keys(quarterData).length > 0) {
-        quarterlyResults.push(quarterData);
-      }
-    });
-
-    companyData.quarterlyResults = quarterlyResults;
-
     // Extract additional data required for evaluation
     companyData['Sales growth 3Years'] = parseFloat($('td:contains("Sales growth (3Yrs)")').next().text().replace('%', '')) || 0;
     companyData['Profit growth 3Years'] = parseFloat($('td:contains("Profit growth (3Yrs)")').next().text().replace('%', '')) || 0;
@@ -203,7 +177,12 @@ async function scrapeCompanyData(companyCode) {
     if (Object.keys(companyData).length === 0) {
       throw new Error('No data could be extracted from the page');
     }
+
     companyData.balanceSheet = scrapeBalanceSheet($);
+    companyData.ratios = scrapeRatios($);
+    companyData.quarterlyResults = scrapeQuarterlyResults($);
+    
+
     return companyData;
   } catch (error) {
     console.error('Error scraping company data:', error);
@@ -230,6 +209,48 @@ function scrapeBalanceSheet($) {
   });
 
   return balanceSheet;
+}
+
+function scrapeRatios($) {
+  const ratios = {};
+  const table = $('#ratios table.data-table');
+  
+  table.find('tr').each((index, row) => {
+    const cells = $(row).find('td, th');
+    const metric = $(cells[0]).text().trim();
+    
+    if (metric && metric !== 'Particulars') {
+      ratios[metric] = {};
+      cells.slice(1).each((i, cell) => {
+        const year = table.find('th').eq(i + 1).text().trim();
+        const value = $(cell).text().trim();
+        ratios[metric][year] = parseFloat(value.replace('%', '')) || value;
+      });
+    }
+  });
+
+  return ratios;
+}
+
+function scrapeQuarterlyResults($) {
+  const quarterlyResults = {};
+  const table = $('#quarters table.data-table');
+  
+  table.find('tr').each((index, row) => {
+    const cells = $(row).find('td, th');
+    const metric = $(cells[0]).text().trim();
+    
+    if (metric && metric !== 'Particulars') {
+      quarterlyResults[metric] = {};
+      cells.slice(1).each((i, cell) => {
+        const quarter = table.find('th').eq(i + 1).text().trim();
+        const value = $(cell).text().trim();
+        quarterlyResults[metric][quarter] = parseFloat(value.replace(/,/g, '')) || value;
+      });
+    }
+  });
+
+  return quarterlyResults;
 }
 
 router.get('/search', async (req, res) => {

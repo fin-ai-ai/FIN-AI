@@ -83,24 +83,24 @@ const FundamentalsPage = () => {
     }
   };
 
-  const renderBalanceSheet = (balanceSheet) => {
-    if (!balanceSheet || Object.keys(balanceSheet).length === 0) return null;
+  const renderFinancialTable = (data, title) => {
+    if (!data || Object.keys(data).length === 0) return null;
 
-    const metrics = Object.keys(balanceSheet);
-    const years = Object.keys(balanceSheet[metrics[0]]);
+    const metrics = Object.keys(data);
+    const periods = Object.keys(data[metrics[0]]);
 
     return (
       <div className="overflow-x-auto mt-6">
-        <h3 className="font-semibold text-lg mb-4">Balance Sheet:</h3>
+        <h3 className="font-semibold text-lg mb-4">{title}:</h3>
         <table className="min-w-full bg-white shadow-md rounded-lg">
           <thead>
             <tr>
               <th className="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-gray-600 uppercase tracking-wider">
                 Metric
               </th>
-              {years.map((year) => (
-                <th key={year} className="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-gray-600 uppercase tracking-wider">
-                  {year}
+              {periods.map((period) => (
+                <th key={period} className="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-gray-600 uppercase tracking-wider">
+                  {period}
                 </th>
               ))}
             </tr>
@@ -109,11 +109,11 @@ const FundamentalsPage = () => {
             {metrics.map((metric, index) => (
               <tr key={metric} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                 <td className="px-6 py-4 whitespace-no-wrap text-sm leading-5 font-medium text-gray-900">{metric}</td>
-                {years.map((year) => (
-                  <td key={`${year}-${metric}`} className="px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-900">
-                    {typeof balanceSheet[metric][year] === 'number' 
-                      ? balanceSheet[metric][year].toLocaleString() 
-                      : balanceSheet[metric][year] || '-'}
+                {periods.map((period) => (
+                  <td key={`${period}-${metric}`} className="px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-900">
+                    {typeof data[metric][period] === 'number' 
+                      ? data[metric][period].toLocaleString() 
+                      : data[metric][period] || '-'}
                   </td>
                 ))}
               </tr>
@@ -124,59 +124,8 @@ const FundamentalsPage = () => {
     );
   };
 
-  const renderQuarterlyResults = (quarterlyResults) => {
-    if (!quarterlyResults || quarterlyResults.length === 0) return null;
-  
-    const quarters = Object.keys(quarterlyResults[0]).sort((a, b) => {
-      const [aMonth, aYear] = a.split(' ');
-      const [bMonth, bYear] = b.split(' ');
-      return new Date(bYear, ['Mar', 'Jun', 'Sep', 'Dec'].indexOf(bMonth)) - new Date(aYear, ['Mar', 'Jun', 'Sep', 'Dec'].indexOf(aMonth));
-    });
-  
-    const metrics = [
-      'Sales', 'Expenses', 'Operating Profit', 'OPM', 'Other Income', 'Interest',
-      'Depreciation', 'PBT', 'Tax', 'Net Profit', 'EPS'
-    ];
-  
-    return (
-      <div className="overflow-x-auto mt-6">
-        <table className="min-w-full bg-white shadow-md rounded-lg">
-          <thead>
-            <tr>
-              <th className="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-gray-600 uppercase tracking-wider">
-                Metric
-              </th>
-              {quarters.map((quarter) => (
-                <th key={quarter} className="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-gray-600 uppercase tracking-wider">
-                  {quarter}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {metrics.map((metric, index) => (
-              <tr key={metric} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                <td className="px-6 py-4 whitespace-no-wrap text-sm leading-5 font-medium text-gray-900">{metric}</td>
-                {quarters.map((quarter) => {
-                  const value = quarterlyResults[index][quarter];
-                  return (
-                    <td key={`${metric}-${quarter}`} className="px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-900">
-                      {typeof value === 'number' 
-                        ? value.toLocaleString() 
-                        : value || '-'}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
-
   const renderStockData = (data) => {
-    const excludeKeys = ['name', 'quarterlyResults', 'about', 'balanceSheet', 'evaluation'];
+    const excludeKeys = ['name', 'quarterlyResults', 'balanceSheet', 'ratios', 'evaluation'];
     const stockInfo = Object.entries(data).filter(([key]) => !excludeKeys.includes(key));
 
     return (
@@ -296,21 +245,11 @@ const FundamentalsPage = () => {
               FinSpect
             </button>
 
-            {stockData.quarterlyResults && (
-              <div className="mt-6">
-                <h3 className="font-semibold text-lg mb-4">Quarterly Results:</h3>
-                {renderQuarterlyResults(stockData.quarterlyResults)}
-              </div>
-            )}
+            {stockData.quarterlyResults && renderFinancialTable(stockData.quarterlyResults, 'Quarterly Results')}
 
-            {stockData.balanceSheet && renderBalanceSheet(stockData.balanceSheet)}
+            {stockData.balanceSheet && renderFinancialTable(stockData.balanceSheet, 'Balance Sheet')}
 
-            {stockData.about && (
-              <div className="mt-6">
-                <h3 className="font-semibold text-lg mb-2">About:</h3>
-                <p className="text-base">{stockData.about}</p>
-              </div>
-            )}
+            {stockData.ratios && renderFinancialTable(stockData.ratios, 'Ratios')}
           </div>
         )}
 
