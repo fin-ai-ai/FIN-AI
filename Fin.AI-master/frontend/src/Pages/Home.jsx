@@ -73,13 +73,43 @@ const StockTable = ({ stocks, onCompanyClick }) => {
     </div>
   );
 };
-
+const NewsSection = ({ newsItems }) => {
+  return (
+    <div className="bg-gray-100 py-8">
+      <div className="container mx-auto px-4">
+        <h2 className="text-3xl font-bold mb-6 text-gray-800">Latest News</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {newsItems.map((item, index) => (
+            <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="p-6">
+                <h3 className="text-xl font-semibold mb-2 text-gray-800 line-clamp-2">
+                  {item.name}
+                </h3>
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 transition duration-300 ease-in-out"
+                >
+                  Read more
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 const FinAiHomepage = () => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState('light');
   const [stocks, setStocks] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [newsItems, setNewsItems] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [newsError, setNewsError] = useState(null);
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -115,13 +145,27 @@ const FinAiHomepage = () => {
       setIsLoading(false);
     }
   };
+  const fetchNews = async () => {
+    setNewsLoading(true);
+    setNewsError(null);
 
+    try {
+      const response = await axios.get('http://localhost:5000/api/news');
+      setNewsItems(response.data.newsItems);
+      setNewsLoading(false);
+    } catch (err) {
+      console.error('Error fetching news:', err);
+      setNewsError('Failed to fetch news. Please try again later.');
+      setNewsLoading(false);
+    }
+  };
   useEffect(() => {
     document.documentElement.className = theme;
   }, [theme]);
 
   useEffect(() => {
     fetchStockData();
+    fetchNews();
   }, []);
 
   return (
@@ -145,7 +189,7 @@ const FinAiHomepage = () => {
           </ul>
         </nav>
       </header>
-
+      
       {/* Hero Section */}
       <section className="container mx-auto text-center py-20 px-4">
         <h1 className="hero-title text-6xl font-bold mb-4 font-poppins animate-fade-in-down">
@@ -185,7 +229,28 @@ const FinAiHomepage = () => {
           <div className="text-center">No stock data available.</div>
         )}
       </section>
-
+      <section id="news" className="container mx-auto py-20 px-4">
+        <h2 className="text-4xl font-bold text-center mb-12 font-poppins animate-fade-in-down text-purple-600">
+          Financial News
+        </h2>
+        {newsLoading ? (
+          <div className="text-center">Loading news...</div>
+        ) : newsError ? (
+          <div className="text-center">
+            <p className="text-red-500 mb-4">{newsError}</p>
+            <button 
+              onClick={fetchNews}
+              className="bg-purple-600 text-white px-4 py-2 rounded-full flex items-center mx-auto"
+            >
+              <RefreshCw className="mr-2" /> Retry
+            </button>
+          </div>
+        ) : newsItems.length > 0 ? (
+          <NewsSection newsItems={newsItems} />
+        ) : (
+          <div className="text-center">No news available.</div>
+        )}
+      </section>
       {/* Subscription Models */}
       <section className="container mx-auto py-20 px-4">
         <h2 className="text-4xl font-bold text-center mb-12 font-poppins animate-fade-in-down text-purple-600">

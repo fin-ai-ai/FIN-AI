@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const { connectDB } = require('./database/db');
 const { getStockData } = require('./routes/stockDataFetcher');
+const { getNewsData } = require('./routes/News');
 
 const app = express();
 
@@ -23,11 +24,21 @@ app.use('/api/auth', authRoutes);
 app.use('/api/fundamentals', fundamentalsRoutes);
 app.use('/api/finspect', finspectRoutes);
 
+// News data route
+app.get('/api/news', async (req, res) => {
+  try {
+    const newsData = await getNewsData();
+    res.json(newsData);
+  } catch (error) {
+    console.error('Error in /api/news route:', error);
+    res.status(500).json({ error: 'An error occurred while fetching news data' });
+  }
+});
+
 // Stock data route
 app.get('/api/stocks', async (req, res) => {
   try {
     const stockData = await getStockData();
-    res.setHeader('Content-Type', 'application/json');
     res.json(stockData);
   } catch (error) {
     console.error('Error in /api/stocks route:', error);

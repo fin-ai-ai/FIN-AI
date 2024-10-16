@@ -5,7 +5,7 @@ import Register from './Pages/Register';
 import FinAiHomepage from './Pages/Home.jsx';
 import Fundamentals from './Pages/Fundamentals';
 import FinInspect from './Pages/FinInspect';
-
+import NewsPage from './Pages/NewsPage';
 function App() {
   return (
     <Router>
@@ -16,7 +16,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/fundamentals" element={<Fundamentals />} />
           <Route path="/fininspect" element={<FinInspect />} />
-
+          <Route path="/news" element={<NewsPage />} />
         </Routes>
       </div>
     </Router>
