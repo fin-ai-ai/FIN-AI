@@ -1,27 +1,88 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { CreditCard, Award, Diamond, Phone, Mail, Sun, Moon, TrendingUp, RefreshCw } from 'lucide-react';
+import { Coins, Gem,CreditCard, Briefcase, Crown, Cloud,Phone, Mail, Sun, Moon, TrendingUp, RefreshCw, Shield } from 'lucide-react';
 import '../App.css';
 import '../index.css';
 
-const SubscriptionCard = ({ title, price, features, icon: Icon }) => {
+const SubscriptionCard = ({ title, price, features, icon: Icon, isPopular }) => {
   return (
-    <div className="subscription-card bg-white bg-gradient-to-br from-purple-600 to-pink-500 text-purple-400 dark:text-white p-6 rounded-lg shadow-lg hover:scale-105 transition-all duration-300 w-full md:w-80 flex-shrink-0 border-2 border-purple-500">
-      <Icon className="w-12 h-12 mb-4 text-purple-500" />
-      <h3 className="text-2xl font-bold mb-2 font-poppins">{title}</h3>
-      <p className="text-3xl font-bold mb-4 font-montserrat">${price}<span className="text-sm">/month</span></p>
-      <ul className="space-y-2">
+    <div className={`bg-white rounded-lg shadow-lg p-6 flex flex-col h-full transition-all duration-300 hover:shadow-xl ${isPopular ? 'border-2 border-purple-500 transform hover:-translate-y-2' : 'hover:-translate-y-1'}`}>
+      {isPopular && (
+        <div className="bg-purple-500 text-white text-xs font-bold uppercase py-1 px-2 rounded-full absolute top-0 right-0 transform translate-x-2 -translate-y-2">
+          Most Popular
+        </div>
+      )}
+      <div className="flex items-center justify-between mb-4">
+        <Icon className={`w-12 h-12 ${isPopular ? 'text-purple-500' : 'text-gray-500'}`} />
+        <h3 className={`text-2xl font-bold ${isPopular ? 'text-purple-600' : 'text-gray-800'}`}>{title}</h3>
+      </div>
+      <p className="text-3xl font-bold mb-6 text-gray-800">₹{price}<span className="text-xl font-normal">/mo</span></p>
+      <ul className="space-y-3 mb-6 flex-grow">
         {features.map((feature, index) => (
-          <li key={index} className="flex items-center font-lato">
-            <TrendingUp className="mr-2 text-purple-500" /> {feature}
+          <li key={index} className="flex items-start">
+            <svg className="w-5 h-5 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+            <span className="text-gray-600">{feature}</span>
           </li>
         ))}
       </ul>
-      <button className="cta-button mt-6 bg-gradient-to-r from-purple-600 to-pink-500 text-white px-4 py-2 rounded-full text-lg font-semibold hover:from-purple-700 hover:to-pink-600 transition-all duration-300">
+      <button className={`w-full py-2 px-4 rounded-lg text-white font-semibold transition-colors duration-300 ${isPopular ? 'bg-purple-500 hover:bg-purple-600' : 'bg-blue-500 hover:bg-blue-600'}`}>
         Choose Plan
       </button>
     </div>
+  );
+};
+const SubscriptionModels = () => {
+  return (
+    <section className="py-20 px-4 bg-gray-100">
+      <div className="container mx-auto">
+        <h2 className="text-4xl font-bold text-center mb-12 text-gray-800">Choose Your Plan</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+          <SubscriptionCard 
+            title="Bronze"
+            price={599}
+            features={[
+              "Base plan",
+              "FinInspect (Only stock analysis)"
+            ]}
+            icon={Shield}
+          />
+          <SubscriptionCard 
+            title="Silver"
+            price={999}
+            features={[
+              "Base plan",
+              "FinInspect (Stock)",
+              "Personal Finance Navigator"
+            ]}
+            icon={Coins}
+          />
+          <SubscriptionCard 
+            title="Gold"
+            price={2499}
+            features={[
+              "Base plan",
+              "FinInspect (Stock + Sector)",
+              "Personal Finance",
+              "API integration (For equity trading)"
+            ]}
+            icon={Crown}
+            isPopular={true}
+          />
+          <SubscriptionCard 
+            title="Diamond"
+            price={6999}
+            features={[
+              "Base plan",
+              "FinInspect (Stock + Sector)",
+              "Personal Finance",
+              "API Integration (Equity, F&O, Crypto)"
+            ]}
+            icon={Gem}
+          />
+        </div>
+      </div>
+    </section>
   );
 };
 const StockTable = ({ stocks, onCompanyClick }) => {
@@ -130,7 +191,9 @@ const FinAiHomepage = () => {
   const handleCompanyClick = (companyName) => {
     navigate(`/fundamentals/${encodeURIComponent(companyName)}`);
   };
-
+  const handlePersonalFinance = () => {
+    navigate('/personal-finance');
+  };
   const fetchStockData = async () => {
     setIsLoading(true);
     setError(null);
@@ -180,7 +243,8 @@ const FinAiHomepage = () => {
             <li><a href="#" className="nav-link hover:text-pink-400 transition-colors duration-300">Home</a></li>
             <li><a href="#" className="nav-link hover:text-pink-400 transition-colors duration-300">About</a></li>
             <li><a href="#" onClick={handleFundamentals} className="nav-link hover:text-pink-400 transition-colors duration-300">Fundamentals</a></li>
-            <li><a href="#" onClick={handleFinInspect} className="nav-link hover:text-pink-400 transition-colors duration-300">FinSpect</a></li>
+            <li><a href="#" onClick={handleFinInspect} className="nav-link hover:text-pink-400 transition-colors duration-300">FinInspect</a></li>
+            <li><a href="#" onClick={handlePersonalFinance} className="nav-link hover:text-pink-400 transition-colors duration-300">Personal Finance</a></li>
             <li>
               <button onClick={toggleTheme} className="p-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white transition-colors duration-300">
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -252,31 +316,7 @@ const FinAiHomepage = () => {
         )}
       </section>
       {/* Subscription Models */}
-      <section className="container mx-auto py-20 px-4">
-        <h2 className="text-4xl font-bold text-center mb-12 font-poppins animate-fade-in-down text-purple-600">
-          Choose Your Path to Financial Excellence
-        </h2>
-        <div className="flex flex-col md:flex-row justify-center items-stretch space-y-8 md:space-y-0 md:space-x-8 overflow-x-auto">
-          <SubscriptionCard 
-            title="Silver Insights"
-            price={29}
-            features={["AI-powered financial analysis", "Weekly performance reports", "Email support within 24 hours", "Basic portfolio optimization"]}
-            icon={CreditCard}
-          />
-          <SubscriptionCard 
-            title="Gold Prosperity"
-            price={59}
-            features={["Advanced AI financial insights", "Daily market analysis", "Priority email support", "API access for custom integrations", "Automated tax optimization"]}
-            icon={Award}
-          />
-          <SubscriptionCard 
-            title="Platinum Mastery"
-            price={99}
-            features={["Full AI financial suite", "Real-time analytics dashboard", "24/7 phone & chat support", "Custom AI model training", "Dedicated financial advisor", "Exclusive investment opportunities"]}
-            icon={Diamond}
-          />
-        </div>
-      </section>
+      <SubscriptionModels />
       {/* Footer */}
       <footer className="bg-gradient-to-br from-purple-700 to-pink-500 py-12 transition-colors duration-300">
         <div className="container mx-auto flex flex-col md:flex-row justify-between items-center px-4">

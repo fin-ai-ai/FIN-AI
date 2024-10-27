@@ -6,6 +6,8 @@ import FinAiHomepage from './Pages/Home.jsx';
 import Fundamentals from './Pages/Fundamentals';
 import FinInspect from './Pages/FinInspect';
 import NewsPage from './Pages/NewsPage';
+import PersonalFinancePage from './Pages/PersonalFinance';
+
 function App() {
   return (
     <Router>
@@ -17,6 +19,7 @@ function App() {
           <Route path="/fundamentals" element={<Fundamentals />} />
           <Route path="/fininspect" element={<FinInspect />} />
           <Route path="/news" element={<NewsPage />} />
+          <Route path="/personal-finance" element={<PersonalFinancePage />} />
         </Routes>
       </div>
     </Router>

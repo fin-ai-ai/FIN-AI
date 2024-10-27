@@ -10,6 +10,7 @@ const FundamentalsPage = () => {
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [theme, setTheme] = useState('light');
+  const [isIndian, setIsIndian] = useState(false);
   const navigate = useNavigate();
 
   const toggleTheme = () => {
@@ -23,47 +24,54 @@ const FundamentalsPage = () => {
   const handleFinInspect = () => {
     navigate('/fininspect');
   };
+  const handlePersonalFinance = () => {
+    navigate('/personal-finance');
+  };
 
   useEffect(() => {
     document.documentElement.className = theme;
   }, [theme]);
 
-  const loadTradingViewWidget = useCallback((symbol) => {
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = 'https://s3.tradingview.com/tv.js';
-    script.async = true;
-    script.onload = () => {
-      new window.TradingView.widget({
-        width: "100%",
-        height: 500,
-        symbol: symbol,
-        interval: 'D',
-        timezone: 'Asia/Kolkata',
-        theme: 'light',
-        style: '1',
-        locale: 'en',
-        toolbar_bg: '#f1f3f6',
-        enable_publishing: false,
-        allow_symbol_change: true,
-        container_id: 'tradingview-widget',
-        show_popup_button: true,
-        popup_width: '1000',
-        popup_height: '650',
-        hide_side_toolbar: false,
-        withdateranges: true,
-        hide_volume: false,
-      });
-    };
-
-    const widgetContainer = document.getElementById('tradingview-widget');
-    widgetContainer.innerHTML = '';
-    document.body.appendChild(script);
-  }, []);
-
+const loadTradingViewWidget = useCallback((symbol, isIndian) => {
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = 'https://s3.tradingview.com/tv.js';
+  script.async = true;
+  
+  script.onload = () => {
+    new window.TradingView.widget({
+      width: "100%",
+      height: 500,
+      symbol: `${isIndian ? 'NSE:' : ''}${symbol.toUpperCase()}`,
+      interval: 'D',
+      timezone: 'Asia/Kolkata', // Using IANA timezone name
+      theme: theme,
+      style: '1',
+      locale: 'en',
+      toolbar_bg: theme === 'dark' ? '#1E2124' : '#f1f3f6',
+      enable_publishing: false,
+      allow_symbol_change: true,
+      container_id: 'tradingview-widget',
+      show_popup_button: true,
+      popup_width: '1000',
+      popup_height: '650',
+      auto_refresh: true,
+      reload_delay: 0,
+      hide_side_toolbar: false,
+      withdateranges: true,
+      hide_volume: false,
+    });
+  };
+  
+  const widgetContainer = document.getElementById('tradingview-widget');
+  widgetContainer.innerHTML = '';
+  document.body.appendChild(script);
+}, [theme]);
   useEffect(() => {
     if (searchTerm) {
-      loadTradingViewWidget(searchTerm.toUpperCase());
+      const isIndian = searchTerm.toUpperCase().startsWith('NSE:') || searchTerm.toUpperCase().startsWith('BSE:');
+      setIsIndian(isIndian);
+      loadTradingViewWidget(isIndian ? searchTerm.slice(4) : searchTerm, isIndian);
     }
   }, [searchTerm, loadTradingViewWidget]);
 
@@ -182,17 +190,18 @@ const FundamentalsPage = () => {
 
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-purple-900 text-white' : 'bg-purple-50 text-purple-900'} transition-colors duration-300`}>
-      {/* Navbar */}
+      {/* Header */}
       <header className="container mx-auto py-6 px-4 flex justify-between items-center">
         <div className="flex items-center">
           <img src="/images/fin.ai.logo.png" alt="fin.ai logo" className="h-10 mr-2" />
         </div>
         <nav>
           <ul className="flex space-x-6 font-montserrat">
-            <li><a href="/" className="nav-link hover:text-pink-400 transition-colors duration-300">Home</a></li>
+            <li><a href="#" className="nav-link hover:text-pink-400 transition-colors duration-300">Home</a></li>
             <li><a href="#" className="nav-link hover:text-pink-400 transition-colors duration-300">About</a></li>
             <li><a href="#" onClick={handleFundamentals} className="nav-link hover:text-pink-400 transition-colors duration-300">Fundamentals</a></li>
-            <li><a href="#" onClick={handleFinInspect} className="nav-link hover:text-pink-400 transition-colors duration-300">FinSpect</a></li>
+            <li><a href="#" onClick={handleFinInspect} className="nav-link hover:text-pink-400 transition-colors duration-300">FinInspect</a></li>
+            <li><a href="#" onClick={handlePersonalFinance} className="nav-link hover:text-pink-400 transition-colors duration-300">Personal Finance</a></li>
             <li>
               <button onClick={toggleTheme} className="p-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white transition-colors duration-300">
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -201,7 +210,7 @@ const FundamentalsPage = () => {
           </ul>
         </nav>
       </header>
-
+      
       <div className="container mx-auto py-4 px-4">
         <h1 className="text-3xl font-bold mb-4 font-poppins text-center">Stock Fundamentals</h1>
 
@@ -211,7 +220,7 @@ const FundamentalsPage = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Enter stock symbol"
+              placeholder="Enter stock symbol (e.g., AAPL, NSE:RELIANCE)"
               className="flex-grow p-2 border border-purple-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-purple-600"
             />
             <button

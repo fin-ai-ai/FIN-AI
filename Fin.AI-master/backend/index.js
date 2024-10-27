@@ -19,10 +19,11 @@ connectDB();
 const authRoutes = require('./routes/auth');
 const fundamentalsRoutes = require('./routes/Fundamentals');
 const finspectRoutes = require('./routes/Finspect');
-
+const personalFinanceRoutes = require('./routes/personalfinance'); 
 app.use('/api/auth', authRoutes);
 app.use('/api/fundamentals', fundamentalsRoutes);
 app.use('/api/finspect', finspectRoutes);
+app.use('/api/personal-finance', personalFinanceRoutes); // New route
 
 // News data route
 app.get('/api/news', async (req, res) => {
