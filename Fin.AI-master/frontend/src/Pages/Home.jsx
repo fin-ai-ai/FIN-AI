@@ -27,7 +27,7 @@ const SubscriptionCard = ({ title, price, features, icon: Icon, isPopular }) => 
         ))}
       </ul>
       <button className={`w-full py-2 px-4 rounded-lg text-white font-semibold transition-colors duration-300 ${isPopular ? 'bg-purple-500 hover:bg-purple-600' : 'bg-blue-500 hover:bg-blue-600'}`}>
-        Choose Plan
+       Choose Plan
       </button>
     </div>
   );
