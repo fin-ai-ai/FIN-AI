@@ -11,13 +11,19 @@ router.post("/register", async (req, res) => {
 
         // Validate input
         if (!(firstname && lastname && email && password)) {
-            return res.status(400).json({ message: "All input fields are required" });
+            return res.status(400).json({ 
+                success: false,
+                message: "All input fields are required" 
+            });
         }
 
         // Check if user already exists
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
-            return res.status(409).json({ message: "User already exists. Please login" });
+            return res.status(409).json({ 
+                success: false,
+                message: "User already exists. Please login" 
+            });
         }
 
         // Encrypt password
@@ -29,29 +35,50 @@ router.post("/register", async (req, res) => {
             lastname,
             email: email.toLowerCase(),
             password: encryptedPassword,
+            subscriptionType: 'free',
+            features: ['base_plan']
         });
 
         // Create token
         const token = jwt.sign(
             { user_id: user._id, email },
-            process.env.SECRET_KEY,
-            { expiresIn: "2h" }
+            process.env.JWT_SECRET || 'fallback-secret-key',
+            { expiresIn: "24h" }
         );
 
-        // Save user token
-        user.token = token;
-
-        // Return new user
-        res.status(201).json(user);
+        // Return new user with token
+        res.status(201).json({
+            success: true,
+            token: `Bearer ${token}`,
+            user: {
+                id: user._id,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                email: user.email,
+                subscriptionType: user.subscriptionType,
+                features: user.features
+            }
+        });
     } catch (err) {
         console.error("Registration error:", err);
         if (err.name === 'ValidationError') {
-            return res.status(400).json({ message: "Validation Error", details: err.message });
+            return res.status(400).json({ 
+                success: false,
+                message: "Validation Error", 
+                details: err.message 
+            });
         }
         if (err.code === 11000) {
-            return res.status(409).json({ message: "Email already in use" });
+            return res.status(409).json({ 
+                success: false,
+                message: "Email already in use" 
+            });
         }
-        res.status(500).json({ message: "Internal Server Error", details: err.message });
+        res.status(500).json({ 
+            success: false,
+            message: "Internal Server Error", 
+            details: err.message 
+        });
     }
 });
 
@@ -62,7 +89,10 @@ router.post("/login", async (req, res) => {
 
         // Validate input
         if (!(email && password)) {
-            return res.status(400).json({ message: "All input fields are required" });
+            return res.status(400).json({ 
+                success: false,
+                message: "All input fields are required" 
+            });
         }
 
         // Find user by email
@@ -72,21 +102,36 @@ router.post("/login", async (req, res) => {
             // Create token
             const token = jwt.sign(
                 { user_id: user._id, email },
-                process.env.SECRET_KEY,
-                { expiresIn: "2h" }
+                process.env.JWT_SECRET || 'fallback-secret-key',
+                { expiresIn: "24h" }
             );
 
-            // Save user token
-            user.token = token;
-
-            // Return user
-            res.status(200).json(user);
+            // Return user with token
+            res.status(200).json({
+                success: true,
+                token: `Bearer ${token}`,
+                user: {
+                    id: user._id,
+                    firstname: user.firstname,
+                    lastname: user.lastname,
+                    email: user.email,
+                    subscriptionType: user.subscriptionType,
+                    features: user.features
+                }
+            });
         } else {
-            res.status(400).json({ message: "Invalid credentials" });
+            res.status(400).json({ 
+                success: false,
+                message: "Invalid credentials" 
+            });
         }
     } catch (err) {
         console.error("Login error:", err);
-        res.status(500).json({ message: "Internal Server Error", details: err.message });
+        res.status(500).json({ 
+            success: false,
+            message: "Internal Server Error", 
+            details: err.message 
+        });
     }
 });
 

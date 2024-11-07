@@ -3,10 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Mail, Lock, ArrowRight, LogIn } from 'lucide-react';
 
-const Popup = ({ message }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-    <div className="bg-white p-6 rounded-lg shadow-xl">
-      <p className="text-lg font-semibold text-purple-700">{message}</p>
+const Popup = ({ message, type = 'success' }) => (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className={`bg-white p-6 rounded-lg shadow-xl ${
+      type === 'success' ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500'
+    }`}>
+      <p className={`text-lg font-semibold ${
+        type === 'success' ? 'text-green-700' : 'text-red-700'
+      }`}>{message}</p>
     </div>
   </div>
 );
@@ -16,6 +20,8 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [popupType, setPopupType] = useState('success');
   const navigate = useNavigate();
 
   const handleEmailLogin = async (e) => {
@@ -28,22 +34,47 @@ const Login = () => {
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', { email, password });
-      const { token, ...userData } = response.data;
+      const response = await axios.post('http://localhost:5000/api/auth/login', {
+        email,
+        password
+      });
+
+      if (response.data.success) {
+        const { token, user } = response.data;
+        localStorage.setItem('token', token);
+        localStorage.setItem('userData', JSON.stringify(user));
+        
+        setPopupMessage('Login successful! Redirecting to dashboard...');
+        setPopupType('success');
+        setShowPopup(true);
+
+        // Log the stored token for debugging
+        console.log('Stored token:', token);
+        console.log('Logged in user:', user);
+
+        // Redirect to dashboard after delay
+        setTimeout(() => {
+          setShowPopup(false);
+          navigate('/dashboard');
+        }, 2000);
+      } else {
+        throw new Error(response.data.message || 'Login failed');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
       
-      localStorage.setItem('token', token);
-      console.log('User logged in:', userData);
+      const errorMessage = err.response?.data?.message || 'An error occurred during login';
+      setError(errorMessage);
+      
+      // Show error popup
+      setPopupMessage(errorMessage);
+      setPopupType('error');
       setShowPopup(true);
+      
+      // Hide error popup after 3 seconds
       setTimeout(() => {
         setShowPopup(false);
-        navigate('/');
-      }, 2000);
-    } catch (err) {
-      if (err.response && err.response.status === 400) {
-        setError("Invalid Credentials");
-      } else {
-        setError(err.response?.data || 'An error occurred during login');
-      }
+      }, 3000);
     }
   };
    
@@ -140,7 +171,7 @@ const Login = () => {
           </div>
         </div>
       </div>
-      {showPopup && <Popup message="Login successful! Redirecting to dashboard..." />}
+      {showPopup && <Popup message={popupMessage} type={popupType} />}
     </div>
   );
 };

@@ -229,6 +229,7 @@ function scrapeRatios($) {
     }
   });
 
+
   return ratios;
 }
 
@@ -302,4 +303,4 @@ router.get('/stocks', async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router;

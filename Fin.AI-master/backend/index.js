@@ -4,6 +4,7 @@ require('dotenv').config();
 const { connectDB } = require('./database/db');
 const { getStockData } = require('./routes/stockDataFetcher');
 const { getNewsData } = require('./routes/News');
+const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 
@@ -19,11 +20,18 @@ connectDB();
 const authRoutes = require('./routes/auth');
 const fundamentalsRoutes = require('./routes/Fundamentals');
 const finspectRoutes = require('./routes/Finspect');
-const personalFinanceRoutes = require('./routes/personalfinance'); 
+const personalFinanceRoutes = require('./routes/personalfinance');
+const subscriptionRoutes = require('./routes/subscription'); // Add this line
+
+// Route middlewares
 app.use('/api/auth', authRoutes);
 app.use('/api/fundamentals', fundamentalsRoutes);
 app.use('/api/finspect', finspectRoutes);
-app.use('/api/personal-finance', personalFinanceRoutes); // New route
+app.use('/api/personal-finance', personalFinanceRoutes);
+app.use('/api/subscription', subscriptionRoutes); // Add this line
+
+// Add dashboard routes
+app.use('/api/dashboard', dashboardRoutes);
 
 // News data route
 app.get('/api/news', async (req, res) => {

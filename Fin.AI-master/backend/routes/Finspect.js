@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const { authMiddleware, requireFeature, requireSubscription } = require('../middleware');
 
 // Constants for analysis types
 const ANALYSIS_TYPES = {
@@ -178,13 +179,17 @@ const getGeminiAnalysis = async (prompt, apiKey) => {
   }
 };
 
-// Main route handler
-router.post('/analyze', async (req, res) => {
+// Protected route handler for fundamental analysis
+router.post('/analyze/fundamental', [
+  authMiddleware,
+  requireFeature('stock_analysis'),
+  requireSubscription('bronze')
+], async (req, res) => {
   try {
-    const { type, input } = req.body;
+    const { input } = req.body;
     
     // Validate request
-    const validationErrors = validateRequest(type, input);
+    const validationErrors = validateRequest(ANALYSIS_TYPES.FUNDAMENTAL, input);
     if (validationErrors.length > 0) {
       return res.status(400).json({ 
         success: false,
@@ -202,13 +207,60 @@ router.post('/analyze', async (req, res) => {
       });
     }
     
-    // Generate appropriate prompt
-    let prompt;
-    if (type === ANALYSIS_TYPES.SECTOR) {
-      prompt = sectorAnalysisPrompt.replace(/\[SECTOR\]/g, input);
-    } else {
-      prompt = fundamentalAnalysisPrompt.replace(/\[COMPANY\]/g, input);
+    // Generate prompt
+    const prompt = fundamentalAnalysisPrompt.replace(/\[COMPANY\]/g, input);
+    
+    // Get analysis from Gemini
+    const rawAnalysis = await getGeminiAnalysis(prompt, apiKey);
+    
+    // Format and return analysis
+    const formattedResponse = formatAnalysisResponse(rawAnalysis);
+    
+    res.json({ 
+      success: true,
+      data: formattedResponse
+    });
+    
+  } catch (error) {
+    console.error('Analysis error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Analysis request failed',
+      details: error.message
+    });
+  }
+});
+
+// Protected route handler for sector analysis
+router.post('/analyze/sector', [
+  authMiddleware,
+  requireFeature('sector_analysis'),
+  requireSubscription('gold')
+], async (req, res) => {
+  try {
+    const { input } = req.body;
+    
+    // Validate request
+    const validationErrors = validateRequest(ANALYSIS_TYPES.SECTOR, input);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed', 
+        details: validationErrors 
+      });
     }
+    
+    // Check for API key
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        error: 'API key not configured'
+      });
+    }
+    
+    // Generate prompt
+    const prompt = sectorAnalysisPrompt.replace(/\[SECTOR\]/g, input);
     
     // Get analysis from Gemini
     const rawAnalysis = await getGeminiAnalysis(prompt, apiKey);
