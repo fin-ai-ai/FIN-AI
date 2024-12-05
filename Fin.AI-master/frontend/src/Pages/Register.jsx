@@ -49,10 +49,10 @@ const Register = () => {
       console.log('Full registration response:', response);
       console.log('Registration response data:', response.data);
 
-      if (response.data && response.data._id) {
-        console.log('Registration successful, user data:', response.data);
+      if (response.data && response.data.user && response.data.user._id) {
+        console.log('Registration successful, user data:', response.data.user);
         // Store user data in localStorage (excluding sensitive info like password)
-        const { password, ...userDataToStore } = response.data;
+        const { password, ...userDataToStore } = response.data.user;
         localStorage.setItem('userData', JSON.stringify(userDataToStore));
         setShowPopup(true);
         setTimeout(() => {
